@@ -21,7 +21,15 @@ key = os.getenv("SUPABASE_KEY")
 
 supabase = create_client(url, key)
 
-model = SentenceTransformer('all-MiniLM-L6-v2')
+model = None
+
+def get_model():
+    global model
+    if model is None:
+        print("📦 Loading embedding model...")
+        model = SentenceTransformer('all-MiniLM-L6-v2')
+    return model
+
 
 bbc = "https://www.bbc.com/"
 
@@ -190,7 +198,7 @@ async def scrape(url, section_container, inner_section, element, id):
         if not text:
             continue
 
-        embedding = model.encode(text).tolist()
+        embedding = get_model().encode(text).tolist()
 
         is_duplicate = False
 
@@ -242,7 +250,7 @@ async def get_data_via_api():
         if not title:
             continue
 
-        embedding = model.encode(title).tolist()
+        embedding = get_model().encode(title).tolist()
 
         articles.append({
             "tittle": title,
@@ -264,7 +272,7 @@ async def get_data_via_api():
         if not title:
             continue
 
-        embedding = model.encode(title).tolist()
+        embedding = get_model().encode(title).tolist()
 
         articles.append({
             "tittle": title,
