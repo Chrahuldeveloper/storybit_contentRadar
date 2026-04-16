@@ -63,10 +63,6 @@ async def ai_itellengence(article):
     4. Script (0-30s format)
     5. 5 Hashtags
 
-    STEP 2: STARTUP IDEA (ONE LINE ONLY)
-    Format:
-    Idea: <name> | What: <what> | Users: <users> | Why: <reason>
-
     Keep output clean and structured.
     """
 
