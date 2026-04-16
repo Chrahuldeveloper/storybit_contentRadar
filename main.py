@@ -1,15 +1,15 @@
 from bs4 import BeautifulSoup
 from supabase import create_client
-from sentence_transformers import SentenceTransformer
+# from sentence_transformers import SentenceTransformer
 import numpy as np
-from pytrends.request import TrendReq
-from google import genai
+# from pytrends.request import TrendReq
+# from google import genai
 import os
 import re
 import requests
 import asyncio
-import schedule
-import time
+# import schedule
+# import time
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -21,14 +21,14 @@ key = os.getenv("SUPABASE_KEY")
 
 supabase = create_client(url, key)
 
-model = None
+# model = None
 
-def get_model():
-    global model
-    if model is None:
-        print("📦 Loading embedding model...")
-        model = SentenceTransformer('all-MiniLM-L6-v2')
-    return model
+# def get_model():
+#     global model
+#     if model is None:
+#         print("📦 Loading embedding model...")
+#         model = SentenceTransformer('all-MiniLM-L6-v2')
+#     return model
 
 
 bbc = "https://www.bbc.com/"
@@ -163,10 +163,10 @@ async def getting_and_scroing_articles(article):
     await calculate_cos(article=article)
 
 
-def cosine_similarity(a,b):
-    a = np.array(a)
-    b = np.array(b)
-    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+# def cosine_similarity(a,b):
+#     a = np.array(a)
+#     b = np.array(b)
+#     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
 async def scrape(url, section_container, inner_section, element, id):
 
@@ -180,16 +180,16 @@ async def scrape(url, section_container, inner_section, element, id):
 
     headlines = content.find_all(element)
 
-    res = supabase.table("news").select("Vectors").execute()
+    # res = supabase.table("news").select("Vectors").execute()
 
-    existing_vectors = []
+    # existing_vectors = []
 
-    for row in res.data:
-        vec = row.get("Vectors")
-        if vec:
-            existing_vectors.append(vec)
+    # for row in res.data:
+    #     vec = row.get("Vectors")
+    #     if vec:
+    #         existing_vectors.append(vec)
 
-    print(f"Loaded {len(existing_vectors)} existing embeddings")
+    # print(f"Loaded {len(existing_vectors)} existing embeddings")
 
     for title in headlines:
 
@@ -198,33 +198,33 @@ async def scrape(url, section_container, inner_section, element, id):
         if not text:
             continue
 
-        embedding = get_model().encode(text).tolist()
+        # embedding = get_model().encode(text).tolist()
 
         is_duplicate = False
 
-        for vec in existing_vectors:
-            try:
-                score = cosine_similarity(embedding, vec)
+        # for vec in existing_vectors:
+        #     try:
+        #         score = cosine_similarity(embedding, vec)
 
-                if score > 0.85:
-                    print("Duplicate skipped:", text)
-                    is_duplicate = True
-                    break
-            except:
-                continue
+        #         if score > 0.85:
+        #             print("Duplicate skipped:", text)
+        #             is_duplicate = True
+        #             break
+        #     except:
+        #         continue
 
-        if is_duplicate:
-            continue
+        # if is_duplicate:
+        #     continue
 
         article = {
             "tittle": text,
-            "Vectors": embedding
+            # "Vectors": embedding
         }
 
         try:
             supabase.table("news").upsert(article, on_conflict="tittle").execute()
             print("Saved:", text)
-            existing_vectors.append(embedding)
+            # existing_vectors.append(embedding)
             await getting_and_scroing_articles(article)
         except Exception as e:
             print("Failed:", text)
@@ -250,11 +250,11 @@ async def get_data_via_api():
         if not title:
             continue
 
-        embedding = get_model().encode(title).tolist()
+        # embedding = get_model().encode(title).tolist()
 
         articles.append({
             "tittle": title,
-            "Vectors": embedding
+            # "Vectors": embedding
         })
 
     res2 =  requests.get(
@@ -272,48 +272,48 @@ async def get_data_via_api():
         if not title:
             continue
 
-        embedding = get_model().encode(title).tolist()
+        # embedding = get_model().encode(title).tolist()
 
         articles.append({
             "tittle": title,
-            "Vectors": embedding   
+            # "Vectors": embedding   
         })
-    res_db = supabase.table("news").select("Vectors").execute()
+    # res_db = supabase.table("news").select("Vectors").execute()
 
-    existing_vectors = [
-        row["Vectors"]
-        for row in res_db.data
-        if row.get("Vectors")
-    ]
+    # existing_vectors = [
+    #     row["Vectors"]
+    #     for row in res_db.data
+    #     if row.get("Vectors")
+    # ]
 
-    THRESHOLD = 0.85
+    # THRESHOLD = 0.85
 
     for article in articles:
 
         try:
-            embedding = article["Vectors"]
+            # embedding = article["Vectors"]
 
             is_duplicate = False
 
-            for vec in existing_vectors:
-                try:
-                    score = cosine_similarity(embedding, vec)
+            # for vec in existing_vectors:
+            #     try:
+            #         score = cosine_similarity(embedding, vec)
 
-                    if score > THRESHOLD:
-                        print("Duplicate skipped:", article["tittle"])
-                        is_duplicate = True
-                        break
-                except:
-                    continue
+            #         if score > THRESHOLD:
+            #             print("Duplicate skipped:", article["tittle"])
+            #             is_duplicate = True
+            #             break
+            #     except:
+            #         continue
 
-            if is_duplicate:
-                continue
+            # if is_duplicate:
+            #     continue
 
             supabase.table("news").upsert(article, on_conflict="tittle").execute()
 
             print("Saved:", article["tittle"])
 
-            existing_vectors.append(embedding)
+            # existing_vectors.append(embedding)
             await getting_and_scroing_articles(article)
             
         except Exception as e:

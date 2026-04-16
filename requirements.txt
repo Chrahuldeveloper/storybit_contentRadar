@@ -2,11 +2,11 @@ beautifulsoup4
 requests
 python-dotenv
 supabase
-sentence-transformers
+# sentence-transformers
 numpy==1.26.4
 google-genai
 pandas
 lxml
-pytrends
-schedule
+# pytrends
+# schedule
 python-dotenv
