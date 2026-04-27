@@ -53,11 +53,30 @@ headers = {
 
 async def optimise_tittle(tittle):
     prompt = f"""
-    You are an expert Viral Content Strategist.
+You are a NEWS TOPIC TAG generator.
 
-    News Title: {tittle}
+TASK:
+Convert the news into a short topic label.
 
-    Rewrite into max 5 words, punchy trending style.
+RULES:
+- Output ONLY 2 to 5 words
+- NO sentences
+- NO punctuation
+- NO explanation
+- NO opinions
+- NO full phrases
+
+STYLE EXAMPLES:
+Attack on Donald Trump
+Iran Israel Conflict
+Strait of Hormuz Tension
+US China Trade War
+Middle East Crisis
+
+INPUT:
+{tittle}
+
+
     """
 
     data = {
