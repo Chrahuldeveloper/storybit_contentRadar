@@ -26,7 +26,7 @@ supabase = create_client(url, key)
 # def get_model():
 #     global model
 #     if model is None:
-#         print("📦 Loading embedding model...")
+#         print(" Loading embedding model...")
 #         model = SentenceTransformer('all-MiniLM-L6-v2')
 #     return model
 
@@ -51,7 +51,7 @@ async def ai_itellengence(article):
     You are an expert Viral Content Strategist + Startup Idea Generator.
 
     News Title:
-    {article.get("tittle")}
+    {article.get("regular_tittle")}
 
     STEP 0: VELOCITY SCORE (0-100)
     - If <50 → respond ONLY "SKIP"
@@ -80,17 +80,17 @@ async def ai_itellengence(article):
         output = res.json()["choices"][0]["message"]["content"]
 
         if output.strip() == "SKIP":
-            print("Skipped:", article.get("tittle"))
+            print("Skipped:", article.get("regular_tittle"))
             return
 
         data = {
-            "tittle": article.get("tittle"),
+            "regular_tittle": article.get("regular_tittle"),
             "summary": output
         }
 
         supabase.table("content_radar").upsert(
             data,
-            on_conflict="tittle"
+            on_conflict="regular_tittle"
         ).execute()
 
         print(output)
@@ -241,7 +241,7 @@ async def get_data_via_api():
         if not isinstance(item, dict):
             continue
 
-        title = item.get("tittle")   
+        title = item.get("regular_tittle")   
 
         if not title:
             continue
@@ -249,7 +249,7 @@ async def get_data_via_api():
         # embedding = get_model().encode(title).tolist()
 
         articles.append({
-            "tittle": title,
+            "regular_tittle": title,
             # "Vectors": embedding
         })
 
@@ -263,7 +263,7 @@ async def get_data_via_api():
         if not isinstance(item, dict):
             continue
 
-        title = item.get("title")  
+        title = item.get("regular_tittle")  
 
         if not title:
             continue
@@ -271,7 +271,7 @@ async def get_data_via_api():
         # embedding = get_model().encode(title).tolist()
 
         articles.append({
-            "tittle": title,
+            "regular_tittle": title,
             # "Vectors": embedding   
         })
     # res_db = supabase.table("news").select("Vectors").execute()
@@ -305,15 +305,15 @@ async def get_data_via_api():
             # if is_duplicate:
             #     continue
 
-            supabase.table("news").upsert(article, on_conflict="tittle").execute()
+            supabase.table("news").upsert(article, on_conflict="regular_tittle").execute()
 
-            print("Saved:", article["tittle"])
+            print("Saved:", article["regular_tittle"])
 
             # existing_vectors.append(embedding)
             await getting_and_scroing_articles(article)
             
         except Exception as e:
-            print("Failed:", article["tittle"])
+            print("Failed:", article["regular_tittle"])
             print(e)
 
 
@@ -345,10 +345,6 @@ async def main():
 
         await asyncio.sleep(3600) 
 
-
-# =========================
-# ENTRY POINT
-# =========================
 
 if __name__ == "__main__":
     asyncio.run(main())
