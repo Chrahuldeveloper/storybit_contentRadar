@@ -11,6 +11,10 @@ import asyncio
 # import schedule
 # import time
 from dotenv import load_dotenv
+from google import genai
+import os
+
+
 
 load_dotenv()
 gnews_key = os.getenv("GnewsApi")
@@ -18,6 +22,7 @@ newsdata_api_key = os.getenv("Newsdata_api_key")
 
 url= os.getenv("SUPABASE_URL")
 key = os.getenv("SUPABASE_KEY")
+
 
 supabase = create_client(url, key)
 
@@ -37,33 +42,67 @@ Hf_token = os.getenv("Hf_token")
 
 print(Hf_token)
 
-async def ai_itellengence(article):
-    print("ai ready (DeepSeek)")
+url = "https://router.huggingface.co/v1/chat/completions"
 
-    url = "https://router.huggingface.co/v1/chat/completions"
 
-    headers = {
+headers = {
         "Authorization": f"Bearer {Hf_token}",
         "Content-Type": "application/json"
     }
+
+
+async def optimise_tittle(tittle):
+    prompt = f"""
+    You are an expert Viral Content Strategist.
+
+    News Title: {tittle}
+
+    Rewrite into max 5 words, punchy trending style.
+    """
+
+    data = {
+        "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+        "messages": [
+            {"role": "system", "content": "Return only optimized title."},
+            {"role": "user", "content": prompt}
+        ]
+    }
+
+    try:
+        res = requests.post(url, headers=headers, json=data)
+        output = res.json()["choices"][0]["message"]["content"]
+
+        return output.strip()  
+
+    except Exception as e:
+        print("DeepSeek error:", e)
+        return None
+    
+
+    
+async def ai_itellengence(article):
+    print("ai ready (DeepSeek)")
+
+    optimized_title = await optimise_tittle(article.get("tittle"))
+
+    if not optimized_title:
+        optimized_title = article.get("tittle")
 
     prompt = f"""
     You are an expert Viral Content Strategist + Startup Idea Generator.
 
     News Title:
-    {article.get("regular_tittle")}
+    {optimized_title}
 
     STEP 0: VELOCITY SCORE (0-100)
     - If <50 → respond ONLY "SKIP"
 
     STEP 1: VIRAL CONTENT
     1. Score
-    2. 3 Hooks (Negative, Curiosity, Value)
-    3. Emotion + why it spreads
-    4. Script (0-30s format)
-    5. 5 Hashtags
-
-    Keep output clean and structured.
+    2. 3 Hooks
+    3. Emotion
+    4. Script
+    5. Hashtags
     """
 
     data = {
@@ -76,31 +115,27 @@ async def ai_itellengence(article):
 
     try:
         res = requests.post(url, headers=headers, json=data)
-
         output = res.json()["choices"][0]["message"]["content"]
 
         if output.strip() == "SKIP":
-            print("Skipped:", article.get("regular_tittle"))
             return
 
-        data = {
-            "regular_tittle": article.get("regular_tittle"),
+        db_data = {
+            "tittle": optimized_title,   
+            "regular_tittle": article.get("tittle"),
             "summary": output
         }
 
         supabase.table("content_radar").upsert(
-            data,
+            db_data,
             on_conflict="regular_tittle"
         ).execute()
 
-        print(output)
-        print("Saved: DeepSeek")
-
-        return {"response": output}
+        print("Saved with optimized title")
+        return output
 
     except Exception as e:
         print("DeepSeek error:", e)
-
 
 
 def clean_keywords(text):
@@ -305,9 +340,9 @@ async def get_data_via_api():
             # if is_duplicate:
             #     continue
 
-            supabase.table("news").upsert(article, on_conflict="regular_tittle").execute()
+            supabase.table("news").upsert(article, on_conflict="tittle").execute()
 
-            print("Saved:", article["regular_tittle"])
+            print("Saved:", article["tittle"])
 
             # existing_vectors.append(embedding)
             await getting_and_scroing_articles(article)
