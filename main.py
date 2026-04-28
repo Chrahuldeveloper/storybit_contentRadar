@@ -1,19 +1,19 @@
 from bs4 import BeautifulSoup
 from supabase import create_client
-# from sentence_transformers import SentenceTransformer
-import numpy as np
-# from pytrends.request import TrendReq
-# from google import genai
 import os
 import re
 import requests
 import asyncio
+from dotenv import load_dotenv
+from openai import OpenAI
+import asyncio
+
+# import numpy as np
+# from sentence_transformers import SentenceTransformer
+# from pytrends.request import TrendReq
+# from google import genai
 # import schedule
 # import time
-from dotenv import load_dotenv
-from google import genai
-import os
-
 
 
 load_dotenv()
@@ -22,6 +22,9 @@ newsdata_api_key = os.getenv("Newsdata_api_key")
 
 url= os.getenv("SUPABASE_URL")
 key = os.getenv("SUPABASE_KEY")
+deepseek_client = OpenAI(
+    api_key=os.environ.get('DEEPSEEK_API_KEY'),
+    base_url="https://api.deepseek.com")
 
 
 supabase = create_client(url, key)
@@ -38,20 +41,20 @@ supabase = create_client(url, key)
 
 bbc = "https://www.bbc.com/"
 
-Hf_token = os.getenv("Hf_token")
+# Hf_token = os.getenv("Hf_token")
 
-print(Hf_token)
+# print(Hf_token)
 
-url = "https://router.huggingface.co/v1/chat/completions"
-
-
-headers = {
-        "Authorization": f"Bearer {Hf_token}",
-        "Content-Type": "application/json"
-    }
+# url = "https://router.huggingface.co/v1/chat/completions"
 
 
-async def optimise_tittle(tittle):
+# headers = {
+#         "Authorization": f"Bearer {Hf_token}",
+#         "Content-Type": "application/json"
+#     }
+
+
+async def optimise_tittle(tittle: str):
     prompt = f"""
 You are a NEWS TOPIC TAG generator.
 
@@ -75,30 +78,28 @@ Middle East Crisis
 
 INPUT:
 {tittle}
-
-
-    """
-
-    data = {
-        "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
-        "messages": [
-            {"role": "system", "content": "Return only optimized title."},
-            {"role": "user", "content": prompt}
-        ]
-    }
+"""
 
     try:
-        res = requests.post(url, headers=headers, json=data)
-        output = res.json()["choices"][0]["message"]["content"]
+        response = deepseek_client.chat.completions.create(
+            model="deepseek-v4-pro",
+            messages=[
+                {"role": "system", "content": "Return only 2-5 word topic label."},
+                {"role": "user", "content": prompt}
+            ],
+            stream=False
+        )
 
-        return output.strip()  
+        output = response.choices[0].message.content.strip()
+
+        return output
 
     except Exception as e:
         print("DeepSeek error:", e)
-        return None
-    
+        return None    
 
     
+
 async def ai_itellengence(article):
     print("ai ready (DeepSeek)")
 
@@ -108,39 +109,41 @@ async def ai_itellengence(article):
         optimized_title = article.get("tittle")
 
     prompt = f"""
-    You are an expert Viral Content Strategist + Startup Idea Generator.
+You are an expert Viral Content Strategist + Startup Idea Generator.
 
-    News Title:
-    {optimized_title}
+News Title:
+{optimized_title}
 
-    STEP 0: VELOCITY SCORE (0-100)
-    - If <50 → respond ONLY "SKIP"
+STEP 0: VELOCITY SCORE (0-100)
+- If <50 → respond ONLY "SKIP"
 
-    STEP 1: VIRAL CONTENT
-    1. Score
-    2. 3 Hooks
-    3. Emotion
-    4. Script
-    5. Hashtags
-    """
-
-    data = {
-        "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
-        "messages": [
-            {"role": "system", "content": "You generate viral content + startup ideas."},
-            {"role": "user", "content": prompt}
-        ]
-    }
+STEP 1: VIRAL CONTENT
+1. Score
+2. 3 Hooks
+3. Emotion
+4. Script
+5. Hashtags
+"""
 
     try:
-        res = requests.post(url, headers=headers, json=data)
-        output = res.json()["choices"][0]["message"]["content"]
+        def call_model():
+            response = deepseek_client.chat.completions.create(
+                model="deepseek-v4-pro",
+                messages=[
+                    {"role": "system", "content": "You generate viral content + startup ideas."},
+                    {"role": "user", "content": prompt}
+                ],
+                stream=False
+            )
+            return response.choices[0].message.content.strip()
 
-        if output.strip() == "SKIP":
+        output = await asyncio.to_thread(call_model)
+
+        if output == "SKIP":
             return
 
         db_data = {
-            "tittle": optimized_title,   
+            "tittle": optimized_title,
             "regular_tittle": article.get("tittle"),
             "summary": output
         }
@@ -155,6 +158,8 @@ async def ai_itellengence(article):
 
     except Exception as e:
         print("DeepSeek error:", e)
+        return None
+    
 
 
 def clean_keywords(text):
@@ -372,7 +377,7 @@ async def get_data_via_api():
 
 
 
-bbc = "https://www.bbc.com/"
+# bbc = "https://www.bbc.com/"
 
 async def cycle():
     print("🚀 Running API fetch...")
